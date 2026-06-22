@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>礼物挑选助手</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { text-align: center; padding: 40px 20px 20px; color: white; }
+        header h1 { font-size: 2.5rem; margin-bottom: 10px; text-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        header p { font-size: 1.1rem; opacity: 0.9; }
+
+        .filter-section { margin: 20px 0; text-align: center; }
+        .filter-section h3 { color: white; margin-bottom: 12px; font-size: 1rem; opacity: 0.85; }
+        .filters { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 16px; }
+        .filter-btn {
+            padding: 9px 20px; border: 2px solid rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.1); color: white; border-radius: 30px;
+            cursor: pointer; font-size: 0.9rem; transition: all 0.3s ease; backdrop-filter: blur(5px);
+        }
+        .filter-btn:hover, .filter-btn.active {
+            background: white; color: #764ba2; border-color: white;
+            transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .select-row { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; align-items: center; margin: 16px 0; }
+        .select-row label { color: white; font-size: 0.95rem; }
+        .custom-select {
+            padding: 8px 18px; border-radius: 20px; border: none;
+            font-size: 0.9rem; background: rgba(255,255,255,0.9); color: #333; cursor: pointer;
+        }
+
+        .personality-section { margin: 24px 0 10px; text-align: center; }
+        .personality-cards { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 12px; }
+        .personality-card {
+            padding: 10px 18px; border-radius: 14px; cursor: pointer;
+            background: rgba(255,255,255,0.12); border: 2px solid rgba(255,255,255,0.4);
+            color: white; font-size: 0.88rem; transition: all 0.3s ease; backdrop-filter: blur(5px);
+        }
+        .personality-card:hover, .personality-card.active {
+            background: white; color: #764ba2; border-color: white;
+            transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .personality-card .p-emoji { margin-right: 5px; }
+
+        .action-row { text-align: center; margin: 24px 0; }
+        .random-btn {
+            padding: 13px 36px; background: white; color: #764ba2; border: none;
+            border-radius: 30px; font-size: 1.05rem; font-weight: 600; cursor: pointer;
+            transition: all 0.3s ease; box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+        .random-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
+
+        .gifts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 22px; margin-top: 20px; }
+        .gift-card {
+            background: white; border-radius: 16px; overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15); transition: all 0.3s ease; cursor: pointer;
+        }
+        .gift-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0,0,0,0.25); }
+        .gift-card .emoji-banner {
+            height: 120px; display: flex; align-items: center; justify-content: center;
+            font-size: 3.5rem; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        .gift-card .card-body { padding: 18px; }
+        .gift-card h3 { font-size: 1.1rem; color: #333; margin-bottom: 6px; }
+        .gift-card .description { font-size: 0.85rem; color: #666; line-height: 1.5; margin-bottom: 10px; }
+        .gift-card .meta { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .gift-card .price { font-size: 0.95rem; font-weight: 600; color: #764ba2; }
+        .gift-card .tags { display: flex; gap: 5px; flex-wrap: wrap; }
+        .gift-card .tag { padding: 2px 9px; background: #f0e6ff; color: #764ba2; border-radius: 10px; font-size: 0.72rem; }
+        .gift-card .tag.scene-tag { background: #e6f7ff; color: #1890ff; }
+        .gift-card .tag.personality-tag { background: #fff7e6; color: #fa8c16; }
+        .gift-card .suitable { margin-top: 8px; font-size: 0.78rem; color: #888; }
+        .gift-card .suitable span { color: #e74c3c; }
+        .gift-card .tip { margin-top: 6px; font-size: 0.78rem; color: #52c41a; font-style: italic; }
+
+        .no-results { text-align: center; color: white; padding: 60px 20px; font-size: 1.2rem; opacity: 0.8; display: none; }
+
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center;
+            align-items: center; backdrop-filter: blur(3px);
+        }
+        .modal-overlay.show { display: flex; }
+        .modal {
+            background: white; border-radius: 20px; padding: 36px; max-width: 520px;
+            width: 90%; text-align: center; animation: popIn 0.3s ease; max-height: 80vh; overflow-y: auto;
+        }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal .modal-emoji { font-size: 4rem; margin-bottom: 16px; }
+        .modal h2 { color: #333; margin-bottom: 8px; font-size: 1.3rem; }
+        .modal p { color: #666; line-height: 1.7; margin-bottom: 16px; font-size: 0.95rem; text-align: left; }
+        .modal .close-btn {
+            padding: 10px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border: none; border-radius: 25px; font-size: 1rem; cursor: pointer; transition: opacity 0.3s;
+        }
+        .modal .close-btn:hover { opacity: 0.85; }
+
+        .scheme-section { margin-top: 40px; padding: 30px 20px; background: rgba(255,255,255,0.08); border-radius: 20px; backdrop-filter: blur(5px); }
+        .scheme-section h2 { color: white; text-align: center; margin-bottom: 20px; font-size: 1.4rem; }
+        .scheme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+        .scheme-card {
+            background: rgba(255,255,255,0.95); border-radius: 14px; padding: 24px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1); transition: transform 0.3s;
+        }
+        .scheme-card:hover { transform: translateY(-4px); }
+        .scheme-card h4 { color: #764ba2; margin-bottom: 12px; font-size: 1.05rem; }
+        .scheme-card ul { list-style: none; padding: 0; }
+        .scheme-card li { padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.88rem; color: #444; line-height: 1.5; }
+        .scheme-card li:last-child { border-bottom: none; }
+        .scheme-card li .item-emoji { margin-right: 8px; }
+        .scheme-card .scheme-tip { margin-top: 12px; padding: 10px; background: #f9f0ff; border-radius: 8px; font-size: 0.82rem; color: #722ed1; }
+
+        footer { text-align: center; color: rgba(255,255,255,0.7); padding: 40px 20px 20px; font-size: 0.9rem; }
+        @media (max-width: 600px) {
+            header h1 { font-size: 1.8rem; }
+            .gifts-grid { grid-template-columns: 1fr; }
+            .scheme-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>🎁 礼物挑选助手</h1>
+        <p>按场景 + 性格，为你定制最走心的送礼方案</p>
+    </header>
+
+    <!-- 场景筛选 -->
+    <div class="filter-section">
+        <h3>📌 送礼场景</h3>
+        <div class="filters" id="sceneFilters">
+            <button class="filter-btn active" data-scene="all">全部场景</button>
+            <button class="filter-btn" data-scene="wedding">💍 结婚</button>
+            <button class="filter-btn" data-scene="birthday">🎂 生日</button>
+            <button class="filter-btn" data-scene="farewell">👋 离职</button>
+            <button class="filter-btn" data-scene="housewarming">🏠 乔迁</button>
+            <button class="filter-btn" data-scene="anniversary">💕 纪念日</button>
+        </div>
+    </div>
+
+    <!-- 性格筛选 -->
+    <div class="filter-section">
+        <h3>🧠 朋友性格（可多选）</h3>
+        <div class="personality-cards" id="personalityFilters">
+            <div class="personality-card" data-p="practical"><span class="p-emoji">🔧</span>务实型</div>
+            <div class="personality-card" data-p="romantic"><span class="p-emoji">🌸</span>浪漫型</div>
+            <div class="personality-card" data-p="creative"><span class="p-emoji">🎨</span>文艺型</div>
+            <div class="personality-card" data-p="tech"><span class="p-emoji">💻</span>科技型</div>
+            <div class="personality-card" data-p="homebody"><span class="p-emoji">🏡</span>居家型</div>
+            <div class="personality-card" data-p="adventurous"><span class="p-emoji">🧗</span>冒险型</div>
+            <div class="personality-card" data-p="foodie"><span class="p-emoji">🍽️</span>美食型</div>
+            <div class="personality-card" data-p="minimalist"><span class="p-emoji">✨</span>极简型</div>
+        </div>
+    </div>
+
+    <!-- 预算 -->
+    <div class="select-row">
+        <label>💰 预算范围：</label>
+        <select class="custom-select" id="budgetSelect">
+            <option value="all">不限</option>
+            <option value="low">100元以内</option>
+            <option value="mid">100-500元</option>
+            <option value="high">500-1000元</option>
+            <option value="premium">1000元以上</option>
+        </select>
+    </div>
+
+    <div class="action-row">
+        <button class="random-btn" onclick="randomPick()">🎲 随机推荐一个</button>
+    </div>
+
+    <div class="gifts-grid" id="giftsGrid"></div>
+    <div class="no-results" id="noResults">没有找到符合条件的礼物，试试调整筛选条件吧~</div>
+
+    <!-- 性格方案区 -->
+    <div class="scheme-section">
+        <h2>📋 按性格定制送礼方案</h2>
+        <div class="scheme-grid" id="schemeGrid"></div>
+    </div>
+
+    <footer><p>用心挑选每一份礼物 ❤️</p></footer>
+</div>
+
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+    <div class="modal" id="modal">
+        <div class="modal-emoji" id="modalEmoji"></div>
+        <h2 id="modalTitle"></h2>
+        <p id="modalDesc"></p>
+        <button class="close-btn" onclick="closeModal()">知道了</button>
+    </div>
+</div>
+
+<script>
+const gifts = [
+    // === 结婚礼物 ===
+    { name: "对杯礼盒", emoji: "☕", desc: "寓意成双成对，高级陶瓷/骨瓷对杯，日常实用又有仪式感。", price: "200-600元", budget: "mid", scenes: ["wedding"], personalities: ["practical","homebody"], suitable: "新婚夫妇", tip: "选有品牌感的，如 Le Creuset 或日式手作陶杯。" },
+    { name: "黄金摆件/转运珠", emoji: "🏆", desc: "传统又保值的结婚贺礼，寓意富贵吉祥。", price: "800-3000元", budget: "premium", scenes: ["wedding"], personalities: ["practical"], suitable: "新婚夫妇", tip: "老凤祥、周大福等品牌有专门婚庆系列。" },
+    { name: "高端床品四件套", emoji: "🛏️", desc: "真丝或长绒棉四件套，让新人的小窝更有品质感。", price: "500-2000元", budget: "high", scenes: ["wedding","housewarming"], personalities: ["practical","homebody","minimalist"], suitable: "新婚夫妇", tip: "选中性色系不容易踩雷，关注面料支数。" },
+    { name: "结婚纪念相框/定制画", emoji: "🖼️", desc: "将婚纱照或合影做成艺术画/数字油画框，独一无二。", price: "200-800元", budget: "mid", scenes: ["wedding","anniversary"], personalities: ["romantic","creative"], suitable: "新婚夫妇", tip: "提前找对方要一张高清合影。" },
+    { name: "高端红酒礼盒", emoji: "🍷", desc: "年份好酒配精美包装，适合婚宴或新婚纪念日开瓶庆祝。", price: "300-1500元", budget: "high", scenes: ["wedding","anniversary"], personalities: ["romantic","foodie"], suitable: "爱酒人士", tip: "选波尔多或纳帕谷经典产区不会错。" },
+    { name: "定制婚礼手绘", emoji: "🎨", desc: "请插画师手绘婚礼现场/婚纱照风格画像，文艺独特。", price: "300-800元", budget: "mid", scenes: ["wedding"], personalities: ["creative","romantic"], suitable: "文艺新人", tip: "提前1-2周沟通风格和需求。" },
+    { name: "智能扫地机器人", emoji: "🤖", desc: "新家实用神器，科技型朋友会非常喜欢这类智能家居。", price: "1500-3500元", budget: "premium", scenes: ["wedding","housewarming"], personalities: ["tech","practical"], suitable: "新婚夫妇", tip: "石头、追觅等品牌口碑好，选激光导航款。" },
+
+    // === 生日礼物 ===
+    { name: "蓝牙降噪耳机", emoji: "🎧", desc: "高品质降噪耳机，通勤/工作都能享受纯净音乐。", price: "500-2000元", budget: "high", scenes: ["birthday","farewell"], personalities: ["tech","minimalist"], suitable: "音乐爱好者/通勤族", tip: "AirPods Pro、Sony WH-1000XM5 是热门选。" },
+    { name: "手工蛋糕+鲜花", emoji: "🎂", desc: "定制蛋糕搭配当季鲜花束，经典生日组合永远不出错。", price: "200-500元", budget: "mid", scenes: ["birthday"], personalities: ["romantic","foodie"], suitable: "任何朋友", tip: "了解对方口味和花的喜好，添加祝福卡片。" },
+    { name: "高端香水", emoji: "🧴", desc: "一瓶适合对方气质的香水，提升日常幸福感的品味之选。", price: "400-1500元", budget: "high", scenes: ["birthday","anniversary"], personalities: ["romantic","minimalist"], suitable: "注重品味的朋友", tip: "Le Labo、Byredo 小众高级，Chanel 经典不出错。" },
+    { name: "Switch游戏机", emoji: "🎮", desc: "和朋友一起玩派对游戏，制造欢乐回忆。", price: "1500-2500元", budget: "premium", scenes: ["birthday"], personalities: ["tech","adventurous"], suitable: "游戏爱好者", tip: "搭配《马里奥派对》多人游戏更欢乐。" },
+    { name: "精酿啤酒/威士忌套装", emoji: "🥃", desc: "精选多款风味酒品，微醺时光是最好的生日享受。", price: "200-800元", budget: "mid", scenes: ["birthday"], personalities: ["foodie","adventurous"], suitable: "爱品酒的朋友", tip: "精酿选IPA入门，威士忌选单一麦芽。" },
+    { name: "定制星图/星座灯", emoji: "🌌", desc: "生日当天的星空图做成挂画或灯，浪漫且独一无二。", price: "150-400元", budget: "mid", scenes: ["birthday","anniversary"], personalities: ["romantic","creative"], suitable: "浪漫型朋友", tip: "输入精确出生日期和城市效果最好。" },
+    { name: "手账本+文具礼盒", emoji: "📓", desc: "Hobonichi/灯塔笔记本搭配钢笔，文艺青年的精神粮食。", price: "200-600元", budget: "mid", scenes: ["birthday"], personalities: ["creative","minimalist"], suitable: "手账爱好者", tip: "搭配彩色墨水或贴纸套装更完整。" },
+    { name: "户外露营装备", emoji: "⛺", desc: "折叠椅/露营灯/咖啡套装，送给热爱自然的冒险家。", price: "200-800元", budget: "mid", scenes: ["birthday"], personalities: ["adventurous","practical"], suitable: "户外爱好者", tip: "Helinox 椅子或 Snow Peak 杯都是露营人心头好。" },
+    { name: "米其林/黑珍珠餐厅体验", emoji: "🍽️", desc: "预订一家高级餐厅双人餐，比实物更难忘的体验式礼物。", price: "500-2000元", budget: "high", scenes: ["birthday","anniversary"], personalities: ["foodie","romantic"], suitable: "美食家", tip: "最好和对方一起去，边吃边聊天。" },
+
+    // === 离职礼物 ===
+    { name: "定制纪念册/离别相册", emoji: "📸", desc: "收集同事们的照片和祝福语做成纪念册，离别不散场。", price: "50-200元", budget: "low", scenes: ["farewell"], personalities: ["romantic","creative"], suitable: "离职同事", tip: "提前收集大家的照片和留言，加上工牌照片。" },
+    { name: "高级钢笔", emoji: "🖊️", desc: "Lamy/Parker/万宝龙钢笔，祝愿前程似锦，书写新篇章。", price: "200-2000元", budget: "mid", scenes: ["farewell"], personalities: ["minimalist","practical","creative"], suitable: "离职同事", tip: "刻上名字或祝福语更有纪念意义。" },
+    { name: "办公桌香薰套装", emoji: "🕯️", desc: "新环境新开始，一套高级香薰让新工位充满仪式感。", price: "200-600元", budget: "mid", scenes: ["farewell","birthday"], personalities: ["romantic","homebody","minimalist"], suitable: "注重氛围感的同事", tip: "Diptyque/观夏是安全之选。" },
+    { name: "便携咖啡机/手冲套装", emoji: "☕", desc: "懂咖啡的人会爱死这个礼物，新公司也能喝到好咖啡。", price: "200-800元", budget: "mid", scenes: ["farewell","birthday"], personalities: ["foodie","practical","tech"], suitable: "咖啡爱好者", tip: "选Fellow手冲壶或Wacaco便携机。" },
+    { name: "Kindle/电子阅读器", emoji: "📖", desc: "新旅程新知识，在通勤路上也能充电学习。", price: "600-2000元", budget: "high", scenes: ["farewell","birthday"], personalities: ["creative","minimalist","practical"], suitable: "爱阅读的同事", tip: "提前下载几本对方可能感兴趣的书。" },
+    { name: "颈椎按摩仪", emoji: "💆", desc: "感谢一起并肩战斗的时光，让对方好好照顾身体。", price: "300-800元", budget: "mid", scenes: ["farewell"], personalities: ["practical","homebody"], suitable: "加班达人同事", tip: "SKG/倍轻松是常见选择，选可加热款。" },
+    { name: "定制U盘/移动硬盘", emoji: "💾", desc: "刻上团队名或入职日期，实用又有纪念价值。", price: "100-400元", budget: "mid", scenes: ["farewell"], personalities: ["tech","practical","minimalist"], suitable: "技术同事", tip: "三星/闪迪便携SSD颜值高又实用。" },
+
+    // === 乔迁/纪念日 ===
+    { name: "投影仪", emoji: "📽️", desc: "家庭影院级体验，搬新家后一起看电影的快乐。", price: "1500-4000元", budget: "premium", scenes: ["housewarming","wedding"], personalities: ["tech","homebody"], suitable: "影音爱好者", tip: "极米/当贝是国产性价比之选。" },
+    { name: "绿植/大型盆栽", emoji: "🌿", desc: "为新家增添生机，天堂鸟/龟背竹都是高颜值选择。", price: "100-500元", budget: "mid", scenes: ["housewarming"], personalities: ["homebody","minimalist"], suitable: "新居主人", tip: "了解对方养护能力，选好养活的品种。" },
+    { name: "定制首饰", emoji: "💎", desc: "刻字戒指/项链/手链，纪念日专属的浪漫信物。", price: "500-3000元", budget: "high", scenes: ["anniversary","birthday"], personalities: ["romantic","minimalist"], suitable: "恋人/伴侣", tip: "刻纪念日日期或名字缩写更特别。" },
+    { name: "双人旅行基金", emoji: "✈️", desc: "DIY一个旅行基金信封，攒够就出发，给未来一个期待。", price: "500-5000元", budget: "premium", scenes: ["anniversary","birthday"], personalities: ["adventurous","romantic"], suitable: "恋人/闺蜜", tip: "配上一张手绘旅行目的地地图更有仪式感。" },
+    { name: "情侣手表", emoji: "⌚", desc: "同频的时间，同步的心跳，经典的纪念日礼物。", price: "1000-5000元", budget: "premium", scenes: ["anniversary","wedding"], personalities: ["minimalist","romantic","practical"], suitable: "伴侣", tip: "DW、天梭情侣款入门，浪琴升级之选。" },
+];
+
+// 性格方案
+const personalitySchemes = {
+    practical: {
+        name: "🔧 务实型朋友",
+        desc: "TA注重性价比和使用频率，讨厌华而不实",
+        wedding: ["家电（扫地机器人/空气炸锅）","高品质床品","现金红包+手写卡"],
+        birthday: ["蓝牙降噪耳机","运动手表","颈椎按摩仪"],
+        farewell: ["便携咖啡机","高级钢笔","人体工学鼠标"],
+        tip: "务实型最在意的是「我真的会用到」，避免送摆件、鲜花等纯装饰性礼物。"
+    },
+    romantic: {
+        name: "🌸 浪漫型朋友",
+        desc: "TA重视仪式感和情感表达，在意心意大于价格",
+        wedding: ["定制星空画/婚礼手绘","高端红酒+蜡烛晚餐","手写祝福+永生花"],
+        birthday: ["定制星图","香水","鲜花蛋糕+手写长信"],
+        farewell: ["离别纪念册","定制音乐盒","薰衣草香薰套装"],
+        tip: "浪漫型看重「专属感」和「故事性」，花心思做定制化远胜于买贵的。"
+    },
+    creative: {
+        name: "🎨 文艺型朋友",
+        desc: "TA追求独特审美，喜欢有设计感的小众物品",
+        wedding: ["手绘婚礼插画","设计师联名家居摆件","手工陶艺对杯"],
+        birthday: ["Hobonichi手账套装","小众独立杂志订阅","艺术展/音乐节门票"],
+        farewell: ["钢笔+手工墨水","文艺帆布包","手工皮具笔袋"],
+        tip: "文艺型讨厌「烂大街」，选小众品牌/独立设计师作品命中率更高。"
+    },
+    tech: {
+        name: "💻 科技型朋友",
+        desc: "TA热爱新奇电子产品，对参数和体验有追求",
+        wedding: ["智能家居套装（灯/音箱）","扫地机器人","投影仪"],
+        birthday: ["机械键盘","Switch/PS5游戏","智能手表"],
+        farewell: ["定制U盘/移动SSD","蓝牙降噪耳机","桌面充电座"],
+        tip: "科技型宁可收一个好配件也不要十个平庸礼物，研究TA缺什么设备。"
+    },
+    homebody: {
+        name: "🏡 居家型朋友",
+        desc: "TA享受宅家的舒适，注重家的氛围感",
+        wedding: ["高级床品四件套","香薰蜡烛套装","全自动咖啡机"],
+        birthday: ["毛绒拖鞋/浴袍","投影仪","精酿啤酒+零食大礼包"],
+        farewell: ["按摩仪","高级茶具","加湿器/香薰机"],
+        tip: "居家型很在意触感和体验，选柔软的、温暖的、香的东西不会错。"
+    },
+    adventurous: {
+        name: "🧗 冒险型朋友",
+        desc: "TA热爱户外和新体验，坐不住想出去浪",
+        wedding: ["双人旅行基金","GoPro运动相机","行李箱"],
+        birthday: ["露营装备","密室/跳伞体验券","户外运动手表"],
+        farewell: ["旅行颈枕套装","便携户外音箱","国家地理摄影集"],
+        tip: "冒险型最爱「体验」胜过「实物」，送一次经历比送东西更让TA开心。"
+    },
+    foodie: {
+        name: "🍽️ 美食型朋友",
+        desc: "TA把吃当作人生大事，对美食有敏锐品味",
+        wedding: ["高端红酒礼盒","米其林双人餐券","全套料理锅具"],
+        birthday: ["精酿/威士忌品鉴套装","网红甜品礼盒","高端餐厅体验"],
+        farewell: ["便携手冲咖啡套装","精品茶叶礼盒","定制围裙+料理课程"],
+        tip: "美食型对品质要求高，宁选一家好餐厅也不要一堆零食大礼包。"
+    },
+    minimalist: {
+        name: "✨ 极简型朋友",
+        desc: "TA追求少而精，讨厌囤东西，断舍离达人",
+        wedding: ["现金/购物卡红包","极简风花瓶+鲜花","高品质毛巾套装"],
+        birthday: ["高端香水（小ml）","一本精选好书","体验类券（SPA/餐厅）"],
+        farewell: ["一支好钢笔","极简风笔记本","咖啡馆储值卡"],
+        tip: "极简型最怕收到「又多了个东西」，选消耗品/体验类/精品单品最安全。"
+    }
+};
+
+let currentScene = 'all';
+let activePersonalities = [];
+let currentBudget = 'all';
+
+function renderGifts() {
+    const grid = document.getElementById('giftsGrid');
+    const noResults = document.getElementById('noResults');
+    const filtered = gifts.filter(g => {
+        const matchScene = currentScene === 'all' || g.scenes.includes(currentScene);
+        const matchBudget = currentBudget === 'all' || g.budget === currentBudget;
+        const matchPersonality = activePersonalities.length === 0 || activePersonalities.some(p => g.personalities.includes(p));
+        return matchScene && matchBudget && matchPersonality;
+    });
+    if (filtered.length === 0) { grid.innerHTML = ''; noResults.style.display = 'block'; return; }
+    noResults.style.display = 'none';
+    grid.innerHTML = filtered.map(g => `
+        <div class="gift-card" onclick="showDetail('${g.emoji}','${g.name}','${g.desc}\\n\\n💡 小贴士：${g.tip}\\n👤 适合：${g.suitable}\\n💰 参考价：${g.price}')">
+            <div class="emoji-banner">${g.emoji}</div>
+            <div class="card-body">
+                <h3>${g.name}</h3>
+                <p class="description">${g.desc}</p>
+                <div class="meta">
+                    <span class="price">${g.price}</span>
+                    <div class="tags">
+                        ${g.scenes.map(s => `<span class="tag scene-tag">${getSceneName(s)}</span>`).join('')}
+                        ${g.personalities.slice(0,2).map(p => `<span class="tag personality-tag">${getPersonalityName(p)}</span>`).join('')}
+                    </div>
+                </div>
+                <p class="suitable">适合：<span>${g.suitable}</span></p>
+                <p class="tip">💡 ${g.tip}</p>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderSchemes() {
+    const grid = document.getElementById('schemeGrid');
+    const personalities = activePersonalities.length > 0 ? activePersonalities : Object.keys(personalitySchemes);
+    grid.innerHTML = personalities.map(p => {
+        const s = personalitySchemes[p];
+        if (!s) return '';
+        const scenes = currentScene === 'all' ? ['wedding','birthday','farewell'] : [currentScene];
+        return `
+        <div class="scheme-card">
+            <h4>${s.name}</h4>
+            <p style="font-size:0.83rem;color:#666;margin-bottom:10px">${s.desc}</p>
+            ${scenes.map(sc => `
+                <div style="margin-bottom:8px">
+                    <strong style="font-size:0.82rem;color:#1890ff">${getSceneName(sc)}推荐：</strong>
+                    <ul>${(s[sc]||[]).map(item => `<li><span class="item-emoji">•</span>${item}</li>`).join('')}</ul>
+                </div>
+            `).join('')}
+            <div class="scheme-tip">💡 ${s.tip}</div>
+        </div>`;
+    }).join('');
+}
+
+function getSceneName(s) {
+    return {wedding:'结婚',birthday:'生日',farewell:'离职',housewarming:'乔迁',anniversary:'纪念日'}[s]||s;
+}
+function getPersonalityName(p) {
+    return {practical:'务实',romantic:'浪漫',creative:'文艺',tech:'科技',homebody:'居家',adventurous:'冒险',foodie:'美食',minimalist:'极简'}[p]||p;
+}
+
+function showDetail(emoji, title, desc) {
+    document.getElementById('modalEmoji').textContent = emoji;
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalDesc').textContent = desc.replace(/\\n/g, '\n');
+    document.getElementById('modalDesc').style.whiteSpace = 'pre-line';
+    document.getElementById('modalOverlay').classList.add('show');
+}
+function closeModal(e) { if (!e || e.target === document.getElementById('modalOverlay')) document.getElementById('modalOverlay').classList.remove('show'); }
+
+function randomPick() {
+    const filtered = gifts.filter(g => {
+        const matchScene = currentScene === 'all' || g.scenes.includes(currentScene);
+        const matchBudget = currentBudget === 'all' || g.budget === currentBudget;
+        const matchPersonality = activePersonalities.length === 0 || activePersonalities.some(p => g.personalities.includes(p));
+        return matchScene && matchBudget && matchPersonality;
+    });
+    if (filtered.length === 0) return;
+    const pick = filtered[Math.floor(Math.random() * filtered.length)];
+    showDetail(pick.emoji, '🎲 ' + pick.name, pick.desc + '\n\n💡 ' + pick.tip + '\n👤 适合：' + pick.suitable + '\n💰 ' + pick.price);
+}
+
+// 场景按钮
+document.querySelectorAll('#sceneFilters .filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('#sceneFilters .filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentScene = btn.dataset.scene;
+        renderGifts(); renderSchemes();
+    });
+});
+
+// 性格卡片（多选）
+document.querySelectorAll('.personality-card').forEach(card => {
+    card.addEventListener('click', () => {
+        card.classList.toggle('active');
+        const p = card.dataset.p;
+        if (activePersonalities.includes(p)) { activePersonalities = activePersonalities.filter(x => x !== p); }
+        else { activePersonalities.push(p); }
+        renderGifts(); renderSchemes();
+    });
+});
+
+// 预算
+document.getElementById('budgetSelect').addEventListener('change', (e) => { currentBudget = e.target.value; renderGifts(); });
+
+// ESC关闭
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+// 初始渲染
+renderGifts(); renderSchemes();
+</script>
+</body>
+</html>
